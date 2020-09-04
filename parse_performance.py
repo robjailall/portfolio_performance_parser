@@ -54,7 +54,7 @@ def _calculate_trading_basis(transactions, debug=False):
         if debug:
             print(Transaction.key(t), before_cash, running_cash_total, before_sales, running_sales_total, running_gain)
 
-    return running_gain / abs(running_cash_total), running_cash_total, running_gain
+    return running_gain / abs(running_cash_total), running_cash_total, running_gain, running_sales_total
 
 
 def _symbol_included(text, include_symbols):
