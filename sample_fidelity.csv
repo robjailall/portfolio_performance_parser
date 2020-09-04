@@ -1,0 +1,2 @@
+Symbol(CUSIP),Security Description,Quantity,Date Acquired,Date Sold,Proceeds,Cost Basis,Short Term Gain/Loss,Long Term Gain/Loss
+FAKE(123),"Fake Stock",10,01/01/2020,01/30/2020,"$1000.00 ","$2000.00 ","($1000.00)",-
