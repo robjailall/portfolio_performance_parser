@@ -1,3 +1,3 @@
 Security,Trans type,Qty,Open date,Cost,Close date,Proceeds,ST gain($),LT gain($),OR gain($)
-Fake stock (FAKE),Sell.FIFO,10,1/1/20,"1,000.0 ",1/30/20,"2,000.0 ","(1000.0 )"",,
+Fake stock (FAKE),Sell.FIFO,10,1/1/20,"1,000.0 ",1/30/20,"2,000.0 ","(1000.0 )",,
 Total:,,,,"1,000.00 ",,"2,000.00 ","(1,000.00)",,
