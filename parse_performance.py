@@ -57,25 +57,30 @@ def _calculate_trading_basis(transactions, debug=False):
     return running_gain / abs(running_cash_total), running_cash_total, running_gain, running_sales_total
 
 
-def _symbol_included(text, include_symbols):
+def _symbol_included(text, include_symbols, exclude_symbols):
+    if exclude_symbols:
+        for symbol in exclude_symbols:
+            if symbol.upper() in text.upper():
+                return False
+
     if include_symbols:
-        found = False
+        found_include = False
         for symbol in include_symbols:
             if symbol.upper() in text.upper():
                 return True
-        if not found:
+        if not found_include:
             return False
     return True
 
 
-def parse_tdameritrade_realized_gains_file(f, include_symbols, debug=False):
+def parse_tdameritrade_realized_gains_file(f, include_symbols, exclude_symbols, debug=False):
     transactions = []
 
     reader = csv.reader(f)
     next(reader)  # header
     for row in reader:
         description = row[0]
-        if not _symbol_included(description, include_symbols):
+        if not _symbol_included(description, include_symbols, exclude_symbols):
             if debug:
                 print("Excluding ", description)
             continue
@@ -94,14 +99,16 @@ def parse_tdameritrade_realized_gains_file(f, include_symbols, debug=False):
     return transactions
 
 
-def parse_fidelity_realized_gains_file(f, include_symbols, debug=False):
+def parse_fidelity_realized_gains_file(f, include_symbols, exclude_symbols, debug=False):
     transactions = []
 
     reader = csv.reader(f)
     next(reader)  # header
     for row in reader:
-        description = row[0][0:row[0].find("(")]
-        if not _symbol_included(description, include_symbols):
+        description = row[0]
+        if "(" in description:
+            description = row[0][0:row[0].find("(")]
+        if not _symbol_included(description, include_symbols, exclude_symbols):
             if debug:
                 print("Excluding ", description)
             continue
@@ -113,33 +120,41 @@ def parse_fidelity_realized_gains_file(f, include_symbols, debug=False):
         close_date = datetime.strptime(row[4].strip(), "%m/%d/%Y")
         close_amount = num(row[5])
         st_gain = num(row[7])
-        lt_gain = num(row[8])
+        lt_gain = num(row[8]) if len(row) == 9 else 0.0
 
         transactions.append(Transaction(open_date, "buy", row[0], open_amount, st_gain, lt_gain))
         transactions.append(Transaction(close_date, "sell", row[0], close_amount, st_gain, lt_gain))
     return transactions
 
 
+def _read_symbols_to_set(filename):
+    symbols = None
+    if filename:
+        symbols = set([])
+        with open(filename) as f:
+            for l in f:
+                symbols.add(l.strip())
+    return symbols
+
+
 def main(ib_filenames: typing.List[str] = [], td_filenames: typing.List[str] = [],
          fidelity_filenames: typing.List[str] = [], output_dir=None, include_symbols_filename=None,
-         debug=False):
+         exclude_symbols_filename=None, debug=False):
     transactions = []
 
-    include_symbols = None
-    if include_symbols_filename:
-        include_symbols = set([])
-        with open(include_symbols_filename) as f:
-            for l in f:
-                include_symbols.add(l.strip())
+    include_symbols = _read_symbols_to_set(include_symbols_filename)
+    exclude_symbols = _read_symbols_to_set(exclude_symbols_filename)
 
     for fn in td_filenames:
         with open(fn) as f:
             transactions.extend(
-                parse_tdameritrade_realized_gains_file(f=f, include_symbols=include_symbols, debug=debug))
+                parse_tdameritrade_realized_gains_file(f=f, include_symbols=include_symbols, debug=debug,
+                                                       exclude_symbols=exclude_symbols))
 
     for fn in fidelity_filenames:
         with open(fn) as f:
-            transactions.extend(parse_fidelity_realized_gains_file(f=f, include_symbols=include_symbols, debug=debug))
+            transactions.extend(parse_fidelity_realized_gains_file(f=f, include_symbols=include_symbols,
+                                                                   exclude_symbols=exclude_symbols, debug=debug))
 
     print(_calculate_trading_basis(transactions, debug=debug))
 
@@ -153,6 +168,7 @@ if __name__ == "__main__":
     parser.add_argument("--td-files", type=str, nargs="+", default=[])
     parser.add_argument("--fidelity-files", type=str, nargs="+", default=[])
     parser.add_argument("--include-symbols", type=str)
+    parser.add_argument("--exclude-symbols", type=str)
 
     args = parser.parse_args()
     main(output_dir=args.output_dir,
@@ -160,4 +176,5 @@ if __name__ == "__main__":
          td_filenames=args.td_files,
          fidelity_filenames=args.fidelity_files,
          include_symbols_filename=args.include_symbols,
+         exclude_symbols_filename=args.exclude_symbols,
          debug=args.debug)
